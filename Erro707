@@ -1,0 +1,749 @@
+-- GG PRIME + MM2 HUB OTIMIZADO
+if getgenv().MM2HubLoaded then return end
+getgenv().MM2HubLoaded = true
+
+-- Services
+local P, RS, UIS, WS, CG, Tween, VU, TS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService"), game:GetService("Workspace"), game:GetService("CoreGui"), game:GetService("TweenService"), game:GetService("VirtualUser"), game:GetService("TeleportService")
+local plr, cam, ass, xer, autoF, killA, aimC, espO = P.LocalPlayer, WS.CurrentCamera, nil, nil, false, false, nil, {}
+local S = {ESP=false,AimAssist=false,AimAssistForca=0.6,AutoFarm=false,KillAll=false,SpeedBoost=false,SpeedBoostValue=24,InfiniteJump=false,NoClip=false,AutoPickGun=false,AutoPickCoins=false,TPTool=false,AntiBan=true,Notificacoes=true,TPAuto=false,RevealMurderer=false,InstantKillAll=false,AutoWin=false}
+local deb = false
+
+-- Remove GUIs antigas
+pcall(function()
+for _,v in pairs(CG:GetChildren()) do
+if v.Name=="GGPrimeHub" or v.Name=="MM2HubUI" then v:Destroy() end
+end
+end)
+
+-- Notificações
+local function n(t,d,s)
+if S.Notificacoes then
+pcall(function()
+game:GetService("StarterGui"):SetCore("SendNotification",{Title=tostring(t),Text=tostring(d),Duration=s or 3})
+end)
+end
+end
+
+-- Anti-Ban seguro
+if S.AntiBan then
+task.spawn(function()
+while true do
+task.wait(60)
+pcall(function() VU:CaptureController() VU:ClickButton2(Vector2.new()) end)
+end
+end)
+local mt = getrawmetatable and getrawmetatable(game)
+if mt and setreadonly then
+local old = mt.__namecall
+setreadonly(mt,false)
+mt.__namecall = newcclosure(function(s,...)
+local m = getnamecallmethod()
+if m=="Kick" or m=="kick" then
+n("⚠️ ANTI-BAN","Kick bloqueado!",3)
+task.wait(1)
+TS:Teleport(game.PlaceId,plr)
+return
+end
+return old(s,...)
+end)
+setreadonly(mt,true)
+end
+n("🛡️ ANTI-BAN","Ativado",2)
+end
+
+-- Roles
+local function roles()
+local a,x = nil,nil
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character then
+if p.Character:FindFirstChild("Knife") or (p.Backpack and p.Backpack:FindFirstChild("Knife")) then a=p
+elseif p.Character:FindFirstChild("Gun") or (p.Backpack and p.Backpack:FindFirstChild("Gun")) then x=p end
+end
+end
+ass, xer = a or ass, x or xer
+return ass,xer
+end
+task.spawn(function() while true do task.wait(2) roles() end end)
+
+-- ESP
+local function espUp()
+for _,o in pairs(espO) do pcall(function() o:Destroy() end) end
+espO = {}
+if not S.ESP then return end
+local a,x = roles()
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character then
+local h = Instance.new("Highlight")
+h.Name = "MM2_ESP"
+h.Parent = p.Character
+h.FillTransparency = 0.5
+h.OutlineTransparency = 0
+h.FillColor = p==a and Color3.fromRGB(255,0,0) or p==x and Color3.fromRGB(0,100,255) or Color3.fromRGB(0,255,0)
+espO[p] = h
+end
+end
+end
+task.spawn(function() while true do task.wait(3) if S.ESP then espUp() end end end)
+P.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() task.wait(1) if S.ESP then espUp() end end) end)
+plr.CharacterAdded:Connect(function() task.wait(1) if S.ESP then espUp() end end)
+
+-- Coins
+local function findCoins()
+local c = {}
+local cc = WS:FindFirstChild("CoinContainer")
+if cc then
+for _,o in pairs(cc:GetChildren()) do
+if o:IsA("BasePart") and (o.Name=="Coin_Server" or o.Name=="Coin") then
+table.insert(c,o)
+end
+end
+return c
+end
+for _,o in pairs(WS:GetDescendants()) do
+if o:IsA("BasePart") and (o.Name=="Coin_Server" or o.Name=="Coin") then
+table.insert(c,o)
+end
+end
+return c
+end
+
+-- Kill All
+local function killAllF()
+if killA then return end
+killA = true
+n("🔪 KILL ALL","Ativado!",3)
+task.spawn(function()
+while killA do
+task.wait(0.3)
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local hrp, hum = plr.Character.HumanoidRootPart, plr.Character:FindFirstChild("Humanoid")
+if not hum or hum.Health<=0 then return end
+local knife = plr.Character:FindFirstChild("Knife") or plr.Backpack:FindFirstChild("Knife")
+if S.InstantKillAll then
+-- Instant Kill All (teleport players para o void)
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+p.Character.HumanoidRootPart.CFrame = CFrame.new(0,-500,0)
+end
+end
+else
+-- Kill All normal
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+local th,tHum = p.Character.HumanoidRootPart, p.Character:FindFirstChild("Humanoid")
+if tHum and tHum.Health>0 then
+hrp.CFrame = th.CFrame * CFrame.new(0,0,-3)
+task.wait(0.1)
+if knife then
+knife.Parent = plr.Character
+task.wait(0.1)
+knife:Activate()
+knife.Parent = plr.Backpack
+end
+end
+end
+end
+end
+end)
+end
+end)
+end
+
+local function stopKA()
+killA = false
+n("🔪 KILL ALL","Desativado",2)
+end
+
+-- Auto Farm
+local function autoFarmF()
+if autoF then return end
+autoF = true
+n("💰 AUTO FARM","Ativado!",3)
+task.spawn(function()
+while autoF do
+task.wait(0.5)
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local hrp, coins = plr.Character.HumanoidRootPart, findCoins()
+if #coins>0 then
+local closest,d = coins[1], (coins[1].Position-hrp.Position).Magnitude
+for _,c in ipairs(coins) do
+if c and c.Parent then
+local dist = (c.Position-hrp.Position).Magnitude
+if dist<d then d,closest = dist,c end
+end
+end
+if closest then
+hrp.CFrame = CFrame.new(closest.Position+Vector3.new(0,3,0))
+task.wait(0.1)
+if (closest.Position-hrp.Position).Magnitude<10 then
+firetouchinterest(hrp,closest,0)
+task.wait(0.1)
+firetouchinterest(hrp,closest,1)
+end
+end
+end
+end)
+end
+end)
+end
+
+local function stopAF()
+autoF = false
+n("💰 AUTO FARM","Desativado",2)
+end
+
+-- Aim Assist
+local function aimF()
+if aimC then return end
+aimC = true
+n("🎯 AIM ASSIST","Ativado!",3)
+local connection
+connection = RS.RenderStepped:Connect(function()
+if not S.AimAssist or not aimC then connection:Disconnect() return end
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local target = xer
+if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 then
+if (p.Character.HumanoidRootPart.Position - plr.Character.HumanoidRootPart.Position).Magnitude < 100 then
+target = p
+break
+end
+end
+end
+end
+if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+local targetPos = target.Character.HumanoidRootPart.Position
+local current = cam.CFrame
+local lookAt = CFrame.lookAt(current.Position, targetPos)
+cam.CFrame = current:Lerp(lookAt, S.AimAssistForca)
+end
+end)
+end)
+end
+
+local function stopAim()
+aimC = false
+n("🎯 AIM ASSIST","Desativado",2)
+end
+
+-- TP Tool
+local tpToolPart = nil
+local function createTPTool()
+if tpToolPart then pcall(function() tpToolPart:Destroy() end) end
+tpToolPart = Instance.new("Part")
+tpToolPart.Name = "TP_TOOL"
+tpToolPart.Size = Vector3.new(2,2,2)
+tpToolPart.BrickColor = BrickColor.new("Bright violet")
+tpToolPart.Material = Enum.Material.Neon
+tpToolPart.Anchored = false
+tpToolPart.CanCollide = false
+tpToolPart.Parent = WS
+
+local billboard = Instance.new("BillboardGui")
+billboard.Name = "TP_GUI"
+billboard.Size = UDim2.new(0,100,0,50)
+billboard.StudsOffset = Vector3.new(0,3,0)
+billboard.AlwaysOnTop = true
+billboard.Parent = tpToolPart
+
+local text = Instance.new("TextLabel")
+text.Size = UDim2.new(1,0,1,0)
+text.BackgroundTransparency = 1
+text.Text = "📍 TP TOOL\n(Clique para teleportar)"
+text.TextColor3 = Color3.new(1,1,1)
+text.TextScaled = true
+text.Font = Enum.Font.GothamBold
+text.Parent = billboard
+
+local click = Instance.new("ClickDetector")
+click.Parent = tpToolPart
+click.MaxActivationDistance = 50
+
+click.MouseClick:Connect(function(player)
+if player == plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = tpToolPart.CFrame * CFrame.new(0,3,0)
+n("📍 TP","Teleportado!",2)
+end
+end)
+end
+
+-- Auto TP
+local function autoTP()
+task.spawn(function()
+while S.TPAuto do
+task.wait(0.5)
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local target = xer or ass
+if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,-3)
+end
+end)
+end
+end)
+end
+
+-- Reveal Murderer
+local function revealMurderer()
+task.spawn(function()
+while S.RevealMurderer do
+task.wait(1)
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character then
+if (p.Backpack:FindFirstChild("Knife") or p.Character:FindFirstChild("Knife")) then
+if not p.Character:FindFirstChild("RevealESP") then
+local h = Instance.new("Highlight")
+h.Name = "RevealESP"
+h.FillColor = Color3.fromRGB(255,0,0)
+h.FillTransparency = 0.2
+h.OutlineTransparency = 0
+h.Parent = p.Character
+n("👁 ASSASSINO",p.Name.." é o assassino!",3)
+end
+end
+end
+end
+end
+end)
+end
+
+-- Speed Boost, Infinite Jump, NoClip
+RS.Heartbeat:Connect(function()
+if S.SpeedBoost and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+plr.Character.Humanoid.WalkSpeed = S.SpeedBoostValue
+elseif plr.Character and plr.Character:FindFirstChild("Humanoid") then
+plr.Character.Humanoid.WalkSpeed = 16
+end
+end)
+
+UIS.JumpRequest:Connect(function()
+if S.InfiniteJump and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+plr.Character.Humanoid:ChangeState("Jumping")
+end
+end)
+
+RS.Stepped:Connect(function()
+if S.NoClip and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+for _,v in pairs(plr.Character:GetDescendants()) do
+if v:IsA("BasePart") then
+v.CanCollide = false
+end
+end
+end
+end)
+
+-- FLY MOBILE
+local flying = false
+local bv, bg
+
+local function startFly()
+if flying then return end
+flying = true
+
+local char = plr.Character
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+bv = Instance.new("BodyVelocity")
+bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+bv.Parent = hrp
+
+bg = Instance.new("BodyGyro")
+bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+bg.Parent = hrp
+
+RS.RenderStepped:Connect(function()
+if not flying then return end
+bv.Velocity = cam.CFrame.LookVector * 60
+bg.CFrame = cam.CFrame
+end)
+end
+
+local function stopFly()
+flying = false
+if bv then bv:Destroy() end
+if bg then bg:Destroy() end
+end
+
+-- HITBOX EXPANDER
+local function expandHitbox()
+for _,p in pairs(P:GetPlayers()) do
+if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+local hrp = p.Character.HumanoidRootPart
+hrp.Size = Vector3.new(10,10,10)
+hrp.Transparency = 0.5
+hrp.Material = Enum.Material.Neon
+hrp.CanCollide = false
+end
+end
+end
+
+-- MODO FANTASMA
+local ghost = false
+
+local function ghostMode(v)
+ghost = v
+if plr.Character then
+for _,part in pairs(plr.Character:GetDescendants()) do
+if part:IsA("BasePart") then
+part.Transparency = ghost and 1 or 0
+part.CanCollide = not ghost
+end
+end
+end
+end
+
+-- GUI Menu
+local gui = Instance.new("ScreenGui")
+gui.Name = "GGPrimeHub"
+gui.Parent = CG
+gui.ResetOnSpawn = false
+
+local open = Instance.new("TextButton")
+open.Parent = gui
+open.Size = UDim2.new(0,60,0,60)
+open.Position = UDim2.new(0,20,0.7,0)
+open.Text = "GG"
+open.BackgroundColor3 = Color3.fromRGB(120,0,255)
+open.TextColor3 = Color3.new(1,1,1)
+open.Font = Enum.Font.GothamBold
+open.TextSize = 18
+open.BorderSizePixel = 0
+Instance.new("UICorner",open).CornerRadius = UDim.new(1,0)
+
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0,520,0,380)
+main.Position = UDim2.new(0.5,-260,0.5,-190)
+main.BackgroundColor3 = Color3.fromRGB(20,20,28)
+main.Active = true
+main.Draggable = true
+main.Visible = false
+main.BorderSizePixel = 0
+Instance.new("UICorner",main)
+
+-- Top Bar
+local top = Instance.new("Frame",main)
+top.Size = UDim2.new(1,0,0,40)
+top.BackgroundColor3 = Color3.fromRGB(120,0,255)
+top.BorderSizePixel = 0
+Instance.new("UICorner",top).CornerRadius = UDim.new(0,8)
+
+local title = Instance.new("TextLabel",top)
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "GG PRIME PRO-SCRIPTS (MM2 HUB)"
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.new(1,1,1)
+title.TextSize = 16
+
+local close = Instance.new("TextButton",top)
+close.Size = UDim2.new(0,40,1,0)
+close.Position = UDim2.new(1,-40,0,0)
+close.Text = "X"
+close.BackgroundTransparency = 1
+close.TextColor3 = Color3.new(1,1,1)
+close.Font = Enum.Font.GothamBold
+close.TextSize = 20
+close.MouseButton1Click:Connect(function()
+main.Visible = false
+open.Visible = true
+end)
+open.MouseButton1Click:Connect(function()
+main.Visible = true
+open.Visible = false
+end)
+-- Side Buttons
+local side = Instance.new("Frame",main)
+side.Size = UDim2.new(0,150,1,-40)
+side.Position = UDim2.new(0,0,0,40)
+side.BackgroundColor3 = Color3.fromRGB(25,25,35)
+side.BorderSizePixel = 0
+Instance.new("UICorner",side).CornerRadius = UDim.new(0,8)
+
+local sideLayout = Instance.new("UIListLayout",side)
+sideLayout.Padding = UDim.new(0,10)
+sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Tabs
+local tabs = {}
+local function createTab(n)
+local s = Instance.new("ScrollingFrame")
+s.Parent = main
+s.Size = UDim2.new(1,-170,1,-50)
+s.Position = UDim2.new(0,160,0,45)
+s.BackgroundTransparency = 1
+s.Visible = false
+s.ScrollBarThickness = 4
+s.ScrollBarImageColor3 = Color3.fromRGB(120,0,255)
+s.BorderSizePixel = 0
+s.CanvasSize = UDim2.new(0,0,0,0)
+s.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local layout = Instance.new("UIListLayout", s)
+layout.Padding = UDim.new(0,10)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+tabs[n] = s
+return s
+end
+
+local function openTab(n)
+for _,v in pairs(tabs) do v.Visible = false end
+tabs[n].Visible = true
+end
+
+local aTab, xTab, cTab, eTab, opTab, fTab = createTab("Assassino"), createTab("Xerife"), createTab("Config"), createTab("Extra"), createTab("OP1"), createTab("Funções")
+openTab("Assassino")
+
+-- Side Buttons
+local function sideBtn(t,tab)
+local b = Instance.new("TextButton")
+b.Parent = side
+b.Size = UDim2.new(1,-10,0,40)
+b.Text = t
+b.BackgroundColor3 = Color3.fromRGB(35,35,50)
+b.TextColor3 = Color3.new(1,1,1)
+b.Font = Enum.Font.GothamBold
+b.TextSize = 14
+b.BorderSizePixel = 0
+Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
+b.MouseButton1Click:Connect(function() openTab(tab) end)
+end
+
+sideBtn("🔪 Assassino","Assassino")
+sideBtn("🔫 Xerife","Xerife")
+sideBtn("⚙ Config","Config")
+sideBtn("⭐ Extra","Extra")
+sideBtn("🧪 OP1","OP1")
+sideBtn("🧩 Funções","Funções")
+
+-- Toggles and Buttons
+local function newToggle(p,t,c)
+local s = false
+local b = Instance.new("TextButton")
+b.Parent = p
+b.Size = UDim2.new(1,-10,0,45)
+b.Text = t.." : OFF"
+b.BackgroundColor3 = Color3.fromRGB(35,35,50)
+b.TextColor3 = Color3.new(1,1,1)
+b.Font = Enum.Font.GothamBold
+b.TextSize = 14
+b.BorderSizePixel = 0
+Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
+b.MouseButton1Click:Connect(function()
+s = not s
+b.Text = t.." : "..(s and "ON" or "OFF")
+b.BackgroundColor3 = s and Color3.fromRGB(70,20,140) or Color3.fromRGB(35,35,50)
+c(s)
+end)
+end
+
+local function newBtn(p,t,c)
+local b = Instance.new("TextButton")
+b.Parent = p
+b.Size = UDim2.new(1,-10,0,45)
+b.Text = t
+b.BackgroundColor3 = Color3.fromRGB(35,35,50)
+b.TextColor3 = Color3.new(1,1,1)
+b.Font = Enum.Font.GothamBold
+b.TextSize = 14
+b.BorderSizePixel = 0
+Instance.new("UICorner",b).CornerRadius = UDim.new(0,6)
+b.MouseButton1Click:Connect(c)
+end
+
+-- ============================================
+-- CRIAÇÃO DOS BOTÕES (DEPOIS DAS FUNÇÕES)
+-- ============================================
+
+-- ASSASSINO
+newToggle(aTab,"🔪 Kill All",function(v)
+S.KillAll = v
+if v then killAllF() else stopKA() end
+end)
+
+newToggle(aTab,"💰 Auto Farm",function(v)
+S.AutoFarm = v
+if v then autoFarmF() else stopAF() end
+end)
+
+newToggle(aTab,"🪙 Auto Pick Coins",function(v)
+S.AutoPickCoins = v
+end)
+
+-- XERIFE
+newToggle(xTab,"🎯 Aim Assist",function(v)
+S.AimAssist = v
+if v then aimF() else stopAim() end
+end)
+
+newToggle(xTab,"🔫 Auto Pick Gun",function(v)
+S.AutoPickGun = v
+end)
+
+newToggle(xTab,"📍 TP Tool",function(v)
+S.TPTool = v
+if v then createTPTool() end
+end)
+
+newToggle(xTab,"🤖 Auto TP",function(v)
+S.TPAuto = v
+if v then autoTP() end
+end)
+
+-- CONFIG
+newToggle(cTab,"👁 ESP Players",function(v)
+S.ESP = v
+espUp()
+end)
+
+newToggle(cTab,"⚡ Speed Boost",function(v)
+S.SpeedBoost = v
+end)
+
+newToggle(cTab,"🦘 Infinite Jump",function(v)
+S.InfiniteJump = v
+end)
+
+newToggle(cTab,"🚪 NoClip",function(v)
+S.NoClip = v
+end)
+
+newBtn(cTab,"💀 Reset Character",function()
+if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+plr.Character.Humanoid.Health = 0
+end
+end)
+
+-- EXTRA
+newToggle(eTab,"👁 Reveal Murderer",function(v)
+S.RevealMurderer = v
+if v then revealMurderer() end
+end)
+
+newToggle(eTab,"⚡ Instant Kill All",function(v)
+S.InstantKillAll = v
+end)
+
+newToggle(eTab,"🏆 Auto Win",function(v)
+S.AutoWin = v
+if v then
+task.spawn(function()
+while S.AutoWin do
+task.wait(1)
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+-- Se for assassino mata todos
+if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,-3)
+end
+end
+end
+-- Se for xerife procura assassino
+local a = ass
+if a and a.Character and a.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = a.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,-5)
+end
+end)
+end
+end)
+end
+end)
+
+newBtn(eTab,"🔄 Rejoin Server",function()
+TS:Teleport(game.PlaceId,plr)
+end)
+
+newBtn(eTab,"🧍 Teleport Lobby",function()
+if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = CFrame.new(0,10,0)
+end
+end)
+
+newBtn(eTab,"💰 Farm Coins Instant",function()
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local hrp = plr.Character.HumanoidRootPart
+for _,c in pairs(findCoins()) do
+hrp.CFrame = CFrame.new(c.Position + Vector3.new(0,3,0))
+task.wait(0.05)
+end
+end)
+end)
+
+newBtn(eTab,"👥 TP Players",function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local hrp = plr.Character.HumanoidRootPart
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+p.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(math.random(-5,5),0,math.random(-5,5))
+end
+end
+end)
+
+-- OP1
+newToggle(opTab,"🔥 Super Speed",function(v)
+S.SpeedBoost = v
+S.SpeedBoostValue = v and 60 or 24
+end)
+
+newToggle(opTab,"👻 Full NoClip",function(v)
+S.NoClip = v
+end)
+
+newToggle(opTab,"🦘 OP Infinite Jump",function(v)
+S.InfiniteJump = v
+end)
+
+newBtn(opTab,"💀 Kill Everyone (Void)",function()
+for _,p in pairs(P:GetPlayers()) do
+if p~=plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+p.Character.HumanoidRootPart.CFrame = CFrame.new(0,-500,0)
+end
+end
+end)
+
+newBtn(opTab,"🧲 Collect All Coins",function()
+pcall(function()
+if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+local hrp = plr.Character.HumanoidRootPart
+for _,c in pairs(findCoins()) do
+hrp.CFrame = CFrame.new(c.Position + Vector3.new(0,3,0))
+task.wait(0.03)
+end
+end)
+end)
+
+newBtn(opTab,"🚀 TP Random Player",function()
+local players = P:GetPlayers()
+local target = players[math.random(1,#players)]
+if target and target~=plr and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,-3)
+end
+end)
+
+-- FUNÇÕES
+newToggle(fTab,"🪽 Fly Mobile",function(v)
+if v then
+startFly()
+else
+stopFly()
+end
+end)
+
+newBtn(fTab,"📦 Hitbox Expander",function()
+expandHitbox()
+end)
+
+newToggle(fTab,"👻 Modo Fantasma",function(v)
+ghostMode(v)
+end)
+
+-- Notificação final
+n("🚀 GG PRIME","MM2 Hub carregado com sucesso!",3)
+```
