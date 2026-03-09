@@ -1,0 +1,918 @@
+-- GG PRIME + MM2 HUB ULTRA OTIMIZADO
+if getgenv().MM2HubLoaded then return end
+getgenv().MM2HubLoaded = true
+
+-- Services (cache local pra acesso mais rápido)
+local Services = {
+    Players = game:GetService("Players"),
+    RunService = game:GetService("RunService"),
+    UserInputService = game:GetService("UserInputService"),
+    Workspace = game:GetService("Workspace"),
+    CoreGui = game:GetService("CoreGui"),
+    TweenService = game:GetService("TweenService"),
+    VirtualUser = game:GetService("VirtualUser"),
+    TeleportService = game:GetService("TeleportService")
+}
+
+local P = Services.Players
+local RS = Services.RunService
+local UIS = Services.UserInputService
+local WS = Services.Workspace
+local CG = Services.CoreGui
+local VU = Services.VirtualUser
+local TS = Services.TeleportService
+
+-- Variáveis principais (com cache local)
+local plr = P.LocalPlayer
+local cam = WS.CurrentCamera
+local ass, xer = nil, nil
+local autoF, killA, aimC = false, false, nil
+local espO = {}
+local flyConnection = nil
+local flyBodyVelocity = nil
+local flySpeed = 50
+
+-- Configurações (estrutura otimizada)
+local S = {
+    ESP = false,
+    AimAssist = false,
+    AimAssistForca = 0.6,
+    AutoFarm = false,
+    KillAll = false,
+    SpeedBoost = false,
+    SpeedBoostValue = 24,
+    InfiniteJump = false,
+    NoClip = false,
+    AutoPickGun = false,
+    AutoPickCoins = false,
+    TPTool = false,
+    AntiBan = true,
+    Notificacoes = true,
+    TPAuto = false,
+    RevealMurderer = false,
+    InstantKillAll = false,
+    AutoWin = false,
+    Fly = false
+}
+
+-- Remove GUIs antigas (otimizado)
+pcall(function()
+    for _, v in ipairs(CG:GetChildren()) do
+        if v.Name == "GGPrimeHub" or v.Name == "MM2HubUI" then
+            v:Destroy()
+        end
+    end
+end)
+
+-- Sistema de notificações otimizado
+local function n(t, d, s)
+    if S.Notificacoes then
+        task.spawn(function()
+            pcall(function()
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = tostring(t),
+                    Text = tostring(d),
+                    Duration = s or 3
+                })
+            end)
+        end)
+    end
+end
+
+-- Anti-Ban melhorado
+if S.AntiBan then
+    task.spawn(function()
+        while task.wait(60) do
+            pcall(function()
+                VU:CaptureController()
+                VU:ClickButton2(Vector2.new())
+            end)
+        end
+    end)
+    
+    -- Proteção contra kick (otimizada)
+    local mt = getrawmetatable and getrawmetatable(game)
+    if mt and setreadonly then
+        local old = mt.__namecall
+        setreadonly(mt, false)
+        mt.__namecall = newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            if method == "Kick" or method == "kick" then
+                n("⚠️ ANTI-BAN", "Kick bloqueado!", 3)
+                task.wait(1)
+                TS:Teleport(game.PlaceId, plr)
+                return
+            end
+            return old(self, ...)
+        end)
+        setreadonly(mt, true)
+    end
+    n("🛡️ ANTI-BAN", "Ativado", 2)
+end
+
+-- Sistema de roles otimizado (usa task.spawn e cache)
+local function updateRoles()
+    local a, x = nil, nil
+    for _, p in ipairs(P:GetPlayers()) do
+        if p ~= plr and p.Character then
+            if p.Character:FindFirstChild("Knife") or (p.Backpack and p.Backpack:FindFirstChild("Knife")) then
+                a = p
+            elseif p.Character:FindFirstChild("Gun") or (p.Backpack and p.Backpack:FindFirstChild("Gun")) then
+                x = p
+            end
+        end
+    end
+    ass, xer = a or ass, x or xer
+end
+
+-- Loop de roles (mais eficiente)
+task.spawn(function()
+    while true do
+        task.wait(2)
+        updateRoles()
+    end
+end)
+
+-- Sistema ESP otimizado (usa menos memória)
+local function updateESP()
+    -- Remove ESP antigo
+    for _, o in pairs(espO) do
+        pcall(function() o:Destroy() end)
+    end
+    espO = {}
+    
+    if not S.ESP then return end
+    
+    local a, x = ass, xer
+    for _, p in ipairs(P:GetPlayers()) do
+        if p ~= plr and p.Character then
+            local h = Instance.new("Highlight")
+            h.Name = "MM2_ESP"
+            h.Parent = p.Character
+            h.FillTransparency = 0.5
+            h.OutlineTransparency = 0
+            h.FillColor = p == a and Color3.fromRGB(255, 0, 0) or 
+                         p == x and Color3.fromRGB(0, 100, 255) or 
+                         Color3.fromRGB(0, 255, 0)
+            espO[p] = h
+        end
+    end
+end
+
+-- Loop ESP (mais eficiente)
+task.spawn(function()
+    while task.wait(3) do
+        if S.ESP then updateESP() end
+    end
+end)
+
+-- Eventos de personagem (otimizados)
+P.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        task.wait(1)
+        if S.ESP then updateESP() end
+    end)
+end)
+
+plr.CharacterAdded:Connect(function()
+    task.wait(1)
+    if S.ESP then updateESP() end
+end)
+
+-- Sistema de busca de coins (otimizado)
+local function findCoins()
+    local coins = {}
+    local container = WS:FindFirstChild("CoinContainer")
+    
+    if container then
+        for _, obj in ipairs(container:GetChildren()) do
+            if obj:IsA("BasePart") and (obj.Name == "Coin_Server" or obj.Name == "Coin") then
+                table.insert(coins, obj)
+            end
+        end
+    else
+        -- Fallback (mais eficiente que varrer todos os descendentes)
+        for _, obj in ipairs(WS:GetDescendants()) do
+            if obj:IsA("BasePart") and (obj.Name == "Coin_Server" or obj.Name == "Coin") then
+                table.insert(coins, obj)
+            end
+        end
+    end
+    
+    return coins
+end
+
+-- Kill All otimizado
+local function killAllF()
+    if killA then return end
+    killA = true
+    n("🔪 KILL ALL", "Ativado!", 3)
+    
+    task.spawn(function()
+        while killA do
+            task.wait(0.3)
+            pcall(function()
+                if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local hrp = plr.Character.HumanoidRootPart
+                local hum = plr.Character:FindFirstChild("Humanoid")
+                if not hum or hum.Health <= 0 then return end
+                
+                local knife = plr.Character:FindFirstChild("Knife") or (plr.Backpack and plr.Backpack:FindFirstChild("Knife"))
+                
+                if S.InstantKillAll then
+                    -- Instant Kill All (teleport para o void)
+                    for _, p in ipairs(P:GetPlayers()) do
+                        if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            p.Character.HumanoidRootPart.CFrame = CFrame.new(0, -500, 0)
+                        end
+                    end
+                else
+                    -- Kill All normal
+                    for _, p in ipairs(P:GetPlayers()) do
+                        if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local targetHRP = p.Character.HumanoidRootPart
+                            local targetHum = p.Character:FindFirstChild("Humanoid")
+                                       
+                            if targetHum and targetHum.Health > 0 then
+                                hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -3)
+                                task.wait(0.1)
+                                
+                                if knife then
+                                    knife.Parent = plr.Character
+                                    task.wait(0.1)
+                                    knife:Activate()
+                                    knife.Parent = plr.Backpack
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end
+
+local function stopKA()
+    killA = false
+    n("🔪 KILL ALL", "Desativado", 2)
+end
+
+-- Auto Farm otimizado
+local function autoFarmF()
+    if autoF then return end
+    autoF = true
+    n("💰 AUTO FARM", "Ativado!", 3)
+    
+    task.spawn(function()
+        while autoF do
+            task.wait(0.5)
+            pcall(function()
+                if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local hrp = plr.Character.HumanoidRootPart
+                local coins = findCoins()
+                
+                if #coins > 0 then
+                    local closest = coins[1]
+                    local minDist = (closest.Position - hrp.Position).Magnitude
+                    
+                    for i = 2, #coins do
+                        local c = coins[i]
+                        if c and c.Parent then
+                            local dist = (c.Position - hrp.Position).Magnitude
+                            if dist < minDist then
+                                minDist = dist
+                                closest = c
+                            end
+                        end
+                    end
+                    
+                    if closest then
+                        hrp.CFrame = CFrame.new(closest.Position + Vector3.new(0, 3, 0))
+                        task.wait(0.1)
+                        
+                        if (closest.Position - hrp.Position).Magnitude < 10 then
+                            firetouchinterest(hrp, closest, 0)
+                            task.wait(0.1)
+                            firetouchinterest(hrp, closest, 1)
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end
+
+local function stopAF()
+    autoF = false
+    n("💰 AUTO FARM", "Desativado", 2)
+end
+
+-- Aim Assist otimizado
+local function aimF()
+    if aimC then return end
+    aimC = true
+    n("🎯 AIM ASSIST", "Ativado!", 3)
+    
+    local connection
+    connection = RS.RenderStepped:Connect(function()
+        if not S.AimAssist or not aimC then
+            connection:Disconnect()
+            return
+        end
+        
+        pcall(function()
+            if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+            
+            local target = xer
+            
+            if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
+                -- Busca alvo mais próximo
+                local minDist = math.huge
+                local hrp = plr.Character.HumanoidRootPart
+                
+                for _, p in ipairs(P:GetPlayers()) do
+                    if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        local targetHRP = p.Character.HumanoidRootPart
+                        local targetHum = p.Character:FindFirstChild("Humanoid")
+                        
+                        if targetHum and targetHum.Health > 0 then
+                            local dist = (targetHRP.Position - hrp.Position).Magnitude
+                            if dist < 100 and dist < minDist then
+                                minDist = dist
+                                target = p
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                local targetPos = target.Character.HumanoidRootPart.Position
+                local current = cam.CFrame
+                local lookAt = CFrame.lookAt(current.Position, targetPos)
+                cam.CFrame = current:Lerp(lookAt, S.AimAssistForca)
+            end
+        end)
+    end)
+end
+
+local function stopAim()
+    aimC = false
+    n("🎯 AIM ASSIST", "Desativado", 2)
+end
+
+-- TP Tool (otimizado)
+local tpToolPart = nil
+local function createTPTool()
+    if tpToolPart then
+        pcall(function() tpToolPart:Destroy() end)
+    end
+    
+    tpToolPart = Instance.new("Part")
+    tpToolPart.Name = "TP_TOOL"
+    tpToolPart.Size = Vector3.new(2, 2, 2)
+    tpToolPart.BrickColor = BrickColor.new("Bright violet")
+    tpToolPart.Material = Enum.Material.Neon
+    tpToolPart.Anchored = false
+    tpToolPart.CanCollide = false
+    tpToolPart.Parent = WS
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "TP_GUI"
+    billboard.Size = UDim2.new(0, 100, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = tpToolPart
+    
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = "📍 TP TOOL\n(Clique para teleportar)"
+    text.TextColor3 = Color3.new(1, 1, 1)
+    text.TextScaled = true
+    text.Font = Enum.Font.GothamBold
+    text.Parent = billboard
+    
+    local click = Instance.new("ClickDetector")
+    click.Parent = tpToolPart
+    click.MaxActivationDistance = 50
+    
+    click.MouseClick:Connect(function(player)
+        if player == plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            plr.Character.HumanoidRootPart.CFrame = tpToolPart.CFrame * CFrame.new(0, 3, 0)
+            n("📍 TP", "Teleportado!", 2)
+        end
+    end)
+end
+
+-- Auto TP otimizado
+local function autoTP()
+    task.spawn(function()
+        while S.TPAuto do
+            task.wait(0.5)
+            pcall(function()
+                if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local target = xer or ass
+                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                    plr.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+                end
+            end)
+        end
+    end)
+end
+
+-- Reveal Murderer otimizado
+local function revealMurderer()
+    task.spawn(function()
+        while S.RevealMurderer do
+            task.wait(1)
+            for _, p in ipairs(P:GetPlayers()) do
+                if p ~= plr and p.Character then
+                    local hasKnife = (p.Backpack and p.Backpack:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife")
+                    
+                    if hasKnife and not p.Character:FindFirstChild("RevealESP") then
+                        local h = Instance.new("Highlight")
+                        h.Name = "RevealESP"
+                        h.FillColor = Color3.fromRGB(255, 0, 0)
+                        h.FillTransparency = 0.2
+                        h.OutlineTransparency = 0
+                        h.Parent = p.Character
+                        n("👁 ASSASSINO", p.Name .. " é o assassino!", 3)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Sistema Fly otimizado
+local function toggleFly()
+    S.Fly = not S.Fly
+    
+    if S.Fly then
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = plr.Character.HumanoidRootPart
+            
+            flyBodyVelocity = Instance.new("BodyVelocity")
+            flyBodyVelocity.Name = "FlyVelocity"
+            flyBodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            flyBodyVelocity.Parent = hrp
+            
+            flyConnection = RS.RenderStepped:Connect(function()
+                if not S.Fly or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+                    if flyConnection then
+                        flyConnection:Disconnect()
+                        flyConnection = nil
+                    end
+                    return
+                end
+                
+                local moveDir = Vector3.new(0, 0, 0)
+                local hrp = plr.Character.HumanoidRootPart
+                
+                if UIS:IsKeyDown(Enum.KeyCode.W) then
+                    moveDir = moveDir + cam.CFrame.LookVector * flySpeed
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.S) then
+                    moveDir = moveDir - cam.CFrame.LookVector * flySpeed
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.A) then
+                    moveDir = moveDir - cam.CFrame.RightVector * flySpeed
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.D) then
+                    moveDir = moveDir + cam.CFrame.RightVector * flySpeed
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.Space) then
+                    moveDir = moveDir + Vector3.new(0, flySpeed, 0)
+                end
+                if UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.RightShift) then
+                    moveDir = moveDir - Vector3.new(0, flySpeed, 0)
+                end
+                
+                if flyBodyVelocity and flyBodyVelocity.Parent then
+                    flyBodyVelocity.Velocity = moveDir
+                end
+            end)
+            
+            n("🕊️ FLY", "Ativado! Use WASD + Espaço/Shift", 3)
+        end
+    else
+        if flyConnection then
+            flyConnection:Disconnect()
+            flyConnection = nil
+        end
+        if flyBodyVelocity and flyBodyVelocity.Parent then
+            flyBodyVelocity:Destroy()
+            flyBodyVelocity = nil
+        end
+        n("🕊️ FLY", "Desativado", 2)
+    end
+end
+
+-- Sistemas passivos otimizados (usam uma única conexão)
+RS.Heartbeat:Connect(function()
+    if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        local hum = plr.Character.Humanoid
+        
+        -- Speed Boost
+        if S.SpeedBoost then
+            hum.WalkSpeed = S.SpeedBoostValue
+        elseif hum.WalkSpeed ~= 16 then
+            hum.WalkSpeed = 16
+        end
+        
+        -- No Clip
+        if S.NoClip then
+            for _, v in ipairs(plr.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Infinite Jump
+UIS.JumpRequest:Connect(function()
+    if S.InfiniteJump and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        plr.Character.Humanoid:ChangeState("Jumping")
+    end
+end)
+
+-- GUI (interface mais limpa e responsiva)
+local gui = Instance.new("ScreenGui")
+gui.Name = "GGPrimeHub"
+gui.Parent = CG
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Botão abrir/fechar
+local openBtn = Instance.new("TextButton")
+openBtn.Parent = gui
+openBtn.Size = UDim2.new(0, 60, 0, 60)
+openBtn.Position = UDim2.new(0, 20, 0.7, 0)
+openBtn.Text = "GG"
+openBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 255)
+openBtn.TextColor3 = Color3.new(1, 1, 1)
+openBtn.Font = Enum.Font.GothamBold
+openBtn.TextSize = 18
+openBtn.BorderSizePixel = 0
+openBtn.Draggable = true
+
+local corner1 = Instance.new("UICorner")
+corner1.CornerRadius = UDim.new(1, 0)
+corner1.Parent = openBtn
+
+-- Janela principal
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0, 520, 0, 380)
+main.Position = UDim2.new(0.5, -260, 0.5, -190)
+main.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+main.Active = true
+main.Draggable = true
+main.Visible = false
+main.BorderSizePixel = 0
+
+local corner2 = Instance.new("UICorner")
+corner2.CornerRadius = UDim.new(0, 8)
+corner2.Parent = main
+
+-- Top bar
+local top = Instance.new("Frame")
+top.Parent = main
+top.Size = UDim2.new(1, 0, 0, 40)
+top.BackgroundColor3 = Color3.fromRGB(120, 0, 255)
+top.BorderSizePixel = 0
+
+local corner3 = Instance.new("UICorner")
+corner3.CornerRadius = UDim.new(0, 8)
+corner3.Parent = top
+
+local title = Instance.new("TextLabel")
+title.Parent = top
+title.Size = UDim2.new(1, 0, 1, 0)
+title.BackgroundTransparency = 1
+title.Text = "GG PRIME PRO-SCRIPTS (MM2 HUB)"
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 16
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Parent = top
+closeBtn.Size = UDim2.new(0, 40, 1, 0)
+closeBtn.Position = UDim2.new(1, -40, 0, 0)
+closeBtn.Text = "X"
+closeBtn.BackgroundTransparency = 1
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+
+closeBtn.MouseButton1Click:Connect(function()
+    main.Visible = false
+    openBtn.Visible = true
+end)
+
+openBtn.MouseButton1Click:Connect(function()
+    main.Visible = true
+    openBtn.Visible = false
+end)
+
+-- Side bar
+local side = Instance.new("Frame")
+side.Parent = main
+side.Size = UDim2.new(0, 150, 1, -40)
+side.Position = UDim2.new(0, 0, 0, 40)
+side.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+side.BorderSizePixel = 0
+
+local corner4 = Instance.new("UICorner")
+corner4.CornerRadius = UDim.new(0, 8)
+corner4.Parent = side
+
+local sideLayout = Instance.new("UIListLayout")
+sideLayout.Parent = side
+sideLayout.Padding = UDim.new(0, 10)
+sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Sistema de abas
+local tabs = {}
+local currentTab = nil
+
+local function createTab(name)
+    local tab = Instance.new("ScrollingFrame")
+    tab.Parent = main
+    tab.Size = UDim2.new(1, -170, 1, -50)
+    tab.Position = UDim2.new(0, 160, 0, 45)
+    tab.BackgroundTransparency = 1
+    tab.Visible = false
+    tab.ScrollBarThickness = 4
+    tab.ScrollBarImageColor3 = Color3.fromRGB(120, 0, 255)
+    tab.BorderSizePixel = 0
+    tab.CanvasSize = UDim2.new(0, 0, 0, 0)
+    tab.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = tab
+    layout.Padding = UDim.new(0, 10)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    
+    tabs[name] = tab
+    return tab
+end
+
+local function openTab(name)
+    if currentTab then
+        tabs[currentTab].Visible = false
+    end
+    tabs[name].Visible = true
+    currentTab = name
+end
+
+-- Criar abas
+local aTab = createTab("Assassino")
+local xTab = createTab("Xerife")
+local cTab = createTab("Config")
+local eTab = createTab("Extra")
+local flyTab = createTab("Fly")
+
+-- Botões laterais
+local function createSideButton(text, tabName)
+    local btn = Instance.new("TextButton")
+    btn.Parent = side
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        openTab(tabName)
+    end)
+end
+
+createSideButton("🔪 Assassino", "Assassino")
+createSideButton("🔫 Xerife", "Xerife")
+createSideButton("⚙ Config", "Config")
+createSideButton("⭐ Extra", "Extra")
+createSideButton("🕊️ Fly", "Fly")
+
+openTab("Assassino")
+
+-- Funções de criação de botões (otimizadas)
+local function newToggle(parent, text, callback)
+    local state = false
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.Size = UDim2.new(1, -10, 0, 45)
+    btn.Text = text .. " : OFF"
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = text .. " : " .. (state and "ON" or "OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(70, 20, 140) or Color3.fromRGB(35, 35, 50)
+        task.spawn(function() callback(state) end)
+    end)
+end
+
+local function newButton(parent, text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.Size = UDim2.new(1, -10, 0, 45)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.BorderSizePixel = 0
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        task.spawn(callback)
+    end)
+end
+
+-- ============================================
+-- CRIAÇÃO DOS BOTÕES (ORGANIZADO POR CATEGORIA)
+-- ============================================
+
+-- Aba Assassino
+newToggle(aTab, "🔪 Kill All", function(v)
+    S.KillAll = v
+    if v then killAllF() else stopKA() end
+end)
+
+newToggle(aTab, "💰 Auto Farm", function(v)
+    S.AutoFarm = v
+    if v then autoFarmF() else stopAF() end
+end)
+
+newToggle(aTab, "🪙 Auto Pick Coins", function(v)
+    S.AutoPickCoins = v
+end)
+
+-- Aba Xerife
+newToggle(xTab, "🎯 Aim Assist", function(v)
+    S.AimAssist = v
+    if v then aimF() else stopAim() end
+end)
+
+newToggle(xTab, "🔫 Auto Pick Gun", function(v)
+    S.AutoPickGun = v
+end)
+
+newToggle(xTab, "📍 TP Tool", function(v)
+    S.TPTool = v
+    if v then createTPTool() end
+end)
+
+newToggle(xTab, "🤖 Auto TP", function(v)
+    S.TPAuto = v
+    if v then autoTP() end
+end)
+
+-- Aba Config
+newToggle(cTab, "👁 ESP Players", function(v)
+    S.ESP = v
+    if v then updateESP() end
+end)
+
+newToggle(cTab, "⚡ Speed Boost", function(v)
+    S.SpeedBoost = v
+end)
+
+newToggle(cTab, "🦘 Infinite Jump", function(v)
+    S.InfiniteJump = v
+end)
+
+newToggle(cTab, "🚪 NoClip", function(v)
+    S.NoClip = v
+end)
+
+newButton(cTab, "💀 Reset Character", function()
+    if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        plr.Character.Humanoid.Health = 0
+    end
+end)
+
+-- Aba Extra
+newToggle(eTab, "👁 Reveal Murderer", function(v)
+    S.RevealMurderer = v
+    if v then revealMurderer() end
+end)
+
+newToggle(eTab, "⚡ Instant Kill All", function(v)
+    S.InstantKillAll = v
+end)
+
+newToggle(eTab, "🏆 Auto Win", function(v)
+    S.AutoWin = v
+    if v then
+        task.spawn(function()
+            while S.AutoWin do
+                task.wait(1)
+                pcall(function()
+                    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+                    
+                    -- Se for assassino
+                    if plr.Backpack:FindFirstChild("Knife") or plr.Character:FindFirstChild("Knife") then
+                        for _, p in ipairs(P:GetPlayers()) do
+                            if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                                plr.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+                            end
+                        end
+                    end
+                    
+                    -- Se for xerife
+                    if ass and ass.Character and ass.Character:FindFirstChild("HumanoidRootPart") then
+                        plr.Character.HumanoidRootPart.CFrame = ass.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+                    end
+                end)
+            end
+        end)
+    end
+end)
+
+newButton(eTab, "🔄 Rejoin Server", function()
+    TS:Teleport(game.PlaceId, plr)
+end)
+
+newButton(eTab, "🧍 Teleport Lobby", function()
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+        plr.Character.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0)
+    end
+end)
+
+newButton(eTab, "💰 Farm Coins Instant", function()
+    pcall(function()
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+        
+        local hrp = plr.Character.HumanoidRootPart
+        for _, coin in ipairs(findCoins()) do
+            hrp.CFrame = CFrame.new(coin.Position + Vector3.new(0, 3, 0))
+            task.wait(0.05)
+        end
+    end)
+end)
+
+newButton(eTab, "👥 TP Players", function()
+    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = plr.Character.HumanoidRootPart
+    for _, p in ipairs(P:GetPlayers()) do
+        if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            p.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(math.random(-5, 5), 0, math.random(-5, 5))
+        end
+    end
+end)
+
+-- Aba Fly
+newToggle(flyTab, "🕊️ Ativar Fly", function(v)
+    S.Fly = v
+    toggleFly()
+end)
+
+newButton(flyTab, "⬆️ Subir Rápido", function()
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and S.Fly then
+        plr.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 20, 0)
+    end
+end)
+
+newButton(flyTab, "⬇️ Descer Rápido", function()
+    if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and S.Fly then
+        plr.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame * CFrame.new(0, -20, 0)
+    end
+end)
+
+newButton(flyTab, "🎯 Parar no Lugar", function()
+    if flyBodyVelocity and flyBodyVelocity.Parent then
+        flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    end
+end)
+
+-- Notificação final
+n("🚀 GG PRIME", "MM2 Hub Ultra Otimizado!", 3)
+```
