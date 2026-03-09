@@ -1,0 +1,291 @@
+-- GG PRIME + MM2 HUB OTIMIZADO
+
+if getgenv().MM2HubLoaded then return end
+getgenv().MM2HubLoaded = true
+
+local P = game:GetService("Players")
+local RS = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local WS = game:GetService("Workspace")
+local CG = game:GetService("CoreGui")
+
+local plr = P.LocalPlayer
+local cam = WS.CurrentCamera
+
+local ass = nil
+
+local S = {
+AutoBack=false,
+KnifeWall=false
+}
+
+local flying = false
+local targetName = ""
+
+-- =================================
+-- FUNÇÕES
+-- =================================
+
+local function flyToggle()
+
+flying = not flying
+
+RS.RenderStepped:Connect(function()
+
+if not flying then return end
+if not plr.Character then return end
+
+local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+if not hrp then return end
+
+local move = Vector3.zero
+
+if UIS:IsKeyDown(Enum.KeyCode.W) then
+move += cam.CFrame.LookVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.S) then
+move -= cam.CFrame.LookVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.A) then
+move -= cam.CFrame.RightVector
+end
+
+if UIS:IsKeyDown(Enum.KeyCode.D) then
+move += cam.CFrame.RightVector
+end
+
+hrp.Velocity = move * 60
+
+end)
+
+end
+
+local function autoBack()
+
+task.spawn(function()
+
+while S.AutoBack do
+
+task.wait(0.1)
+
+if ass and ass.Character and plr.Character then
+
+local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+local ah = ass.Character:FindFirstChild("HumanoidRootPart")
+
+if hrp and ah then
+
+local dist = (hrp.Position - ah.Position).Magnitude
+
+if dist < 20 then
+hrp.CFrame = hrp.CFrame + (hrp.Position - ah.Position).Unit * 25
+end
+
+end
+
+end
+
+end
+
+end)
+
+end
+
+local function knifeWall()
+
+task.spawn(function()
+
+while S.KnifeWall do
+
+task.wait()
+
+if not plr.Character then return end
+local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+
+for _,v in pairs(WS:GetDescendants()) do
+
+if v.Name == "Knife" and v:IsA("BasePart") then
+
+if (v.Position - hrp.Position).Magnitude < 15 then
+v.Anchored = true
+end
+
+end
+
+end
+
+end
+
+end)
+
+end
+
+local function tpToPlayer()
+
+for _,p in pairs(P:GetPlayers()) do
+
+if string.lower(p.Name) == string.lower(targetName) then
+
+if plr.Character and p.Character then
+
+local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+local th = p.Character:FindFirstChild("HumanoidRootPart")
+
+if hrp and th then
+hrp.CFrame = th.CFrame * CFrame.new(0,0,-3)
+end
+
+end
+
+end
+
+end
+
+end
+
+-- =================================
+-- GUI
+-- =================================
+
+local gui = Instance.new("ScreenGui")
+gui.Parent = CG
+gui.Name = "GGPrimeHub"
+
+local main = Instance.new("Frame")
+main.Parent = gui
+main.Size = UDim2.new(0,500,0,350)
+main.Position = UDim2.new(0.5,-250,0.5,-175)
+main.BackgroundColor3 = Color3.fromRGB(20,20,28)
+
+local side = Instance.new("Frame")
+side.Parent = main
+side.Size = UDim2.new(0,150,1,0)
+side.BackgroundColor3 = Color3.fromRGB(30,30,40)
+
+local tabs = {}
+
+local function createTab(name)
+
+local tab = Instance.new("Frame")
+tab.Parent = main
+tab.Size = UDim2.new(1,-150,1,0)
+tab.Position = UDim2.new(0,150,0,0)
+tab.Visible = false
+
+tabs[name] = tab
+
+return tab
+
+end
+
+local function openTab(name)
+
+for _,v in pairs(tabs) do
+v.Visible = false
+end
+
+tabs[name].Visible = true
+
+end
+
+local aTab = createTab("Assassino")
+local xTab = createTab("Xerife")
+local cTab = createTab("Config")
+local eTab = createTab("Extra")
+local fTab = createTab("Funcoes")
+local opTab = createTab("OP1")
+
+openTab("Assassino")
+
+local function sideBtn(text,tab)
+
+local b = Instance.new("TextButton")
+b.Parent = side
+b.Size = UDim2.new(1,0,0,40)
+b.Text = text
+
+b.MouseButton1Click:Connect(function()
+openTab(tab)
+end)
+
+end
+
+sideBtn("🔪 Assassino","Assassino")
+sideBtn("🔫 Xerife","Xerife")
+sideBtn("⚙ Config","Config")
+sideBtn("⭐ Extra","Extra")
+sideBtn("🧩 Funções","Funcoes")
+sideBtn("🧪 OP1","OP1")
+
+local function newBtn(parent,text,callback)
+
+local b = Instance.new("TextButton")
+b.Parent = parent
+b.Size = UDim2.new(1,0,0,40)
+b.Text = text
+
+b.MouseButton1Click:Connect(callback)
+
+end
+
+local function newToggle(parent,text,callback)
+
+local state = false
+
+local b = Instance.new("TextButton")
+b.Parent = parent
+b.Size = UDim2.new(1,0,0,40)
+b.Text = text.." : OFF"
+
+b.MouseButton1Click:Connect(function()
+
+state = not state
+
+b.Text = text.." : "..(state and "ON" or "OFF")
+
+callback(state)
+
+end)
+
+end
+
+-- =================================
+-- FUNÇÕES TAB
+-- =================================
+
+newToggle(fTab,"🪽 Fly",function()
+flyToggle()
+end)
+
+newToggle(fTab,"↩ Auto Back",function(v)
+S.AutoBack = v
+if v then autoBack() end
+end)
+
+newToggle(fTab,"🛡 Parede Anti Faca",function(v)
+S.KnifeWall = v
+if v then knifeWall() end
+end)
+
+-- =================================
+-- OP1 TAB
+-- =================================
+
+local box = Instance.new("TextBox")
+box.Parent = opTab
+box.Size = UDim2.new(1,0,0,40)
+box.PlaceholderText = "Nick do player"
+
+box.FocusLost:Connect(function()
+
+targetName = box.Text
+
+end)
+
+newBtn(opTab,"🔪 TP Para Player",function()
+
+tpToPlayer()
+
+end)
